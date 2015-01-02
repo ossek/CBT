@@ -348,4 +348,178 @@ babadook
     (+ x  incrementby)))
 ((incrementer 3) 2)
 
+;;4.  All together.
+( def asym-hobbit-body-parts [{:name "head" :size 3}
+                             {:name "left-eye" :size 1}
+                             {:name "left-ear" :size 1}
+                             {:name "mouth" :size 1}
+                             {:name "nose" :size 1}
+                             {:name "neck" :size 2}
+                             {:name "left-shoulder" :size 3}
+                             {:name "left-upper-arm" :size 3}
+                             {:name "chest" :size 10}
+                             {:name "back" :size 10}
+                             {:name "left-forearm" :size 3}
+                             {:name "abdomen" :size 6}
+                             {:name "left-kidney" :size 1}
+                             {:name "left-hand" :size 2}
+                             {:name "left-knee" :size 2}
+                             {:name "left-thigh" :size 4}
+                             {:name "left-lower-leg" :size 3}
+                             {:name "left-achilles" :size 1}
+                             {:name "left-foot" :size 2}])
+;;we want to make a 'right-' prefixed version of every
+;;key value pair that has a 'left-' prefix.
+(defn needs-matching-part?
+  [part]
+  (re-find #"^left-" (:name part)))
+;;(needs-matching-part? {:name "left-leg" :size 2})
+
+(defn make-matching-part
+  [part]
+  {:name (clojure.string/replace (:name part) #"^left-" "right-" )
+   :size (:size part) })
+;;(make-matching-part {:name "left-arm" :size 3})
+
+(defn symmetrize-body-parts
+  "Expects sequence of maps, each of which have one :name and one :size"
+  [asym-body-parts]
+  (loop [remaining-asym-body-parts asym-body-parts final-body-parts []]
+  (if (empty? remaining-asym-body-parts)
+    final-body-parts
+    (let [[part & remaining] remaining-asym-body-parts 
+         final-body-parts (conj final-body-parts part)] 
+      (if (needs-matching-part? part) 
+        (recur remaining (conj final-body-parts (make-matching-part part)))
+        (recur remaining final-body-parts))))))
+(symmetrize-body-parts asym-hobbit-body-parts)
+
+;;breakdown:
+;;4.2 let.
+;; binds names on the right to values on the left.  
+;; In this case binds a destructured vector (decomposed to part and remaining) to remaining-asym-body-parts.
+;; then binds 'final-body-parts' to the previous value of final-body-parts with part appended to the end.
+    (let [[part & remaining] remaining-asym-body-parts 
+         final-body-parts (conj final-body-parts part)] 
+;;Importantly, let introduces a new scope, so you can shadow previously defined variables.
+(def x 0)
+(let [x 1] x)
+;;vs
+(def x 0)
+(let [y 1] x)
+;;the value of a let form is the last form in its body which gets evaluated
+
+;;4.3 loop.
+;;loop provides another way to do recursion.
+;;first line of loop introduces bindings:
+;; here we bind remaining-asym-body-parts initially to asym-body-parts
+;; and the inital value bound to final-body-parts is []
+  (loop [remaining-asym-body-parts asym-body-parts final-body-parts []]
+         final-body-parts (conj final-body-parts part)] 
+      (if (needs-matching-part? part) 
+        ;;recur is like calling the anonymous function created by loop
+        (recur remaining (conj final-body-parts (make-matching-part part)))
+        (recur remaining final-body-parts))))))
+
+;;some runnable examples:
+(loop [iteration 0]
+  (println (str "iteration " iteration))
+  ;;can think of this as manually putting in a loop termination condition
+           (if (> iteration 4)
+             (print "done")
+             ;;think of recur as sort of like continue, but manually setting the variables for the next iteration 
+             (recur (inc iteration))))
+
+;;defined without use of loop:
+(defn iterPrint
+  ([]
+  (iterPrint 0))
+  ([iteration]
+   (println (str "iteration " iteration))
+   (if (> iteration 4)
+     (println "done")
+     (iterPrint (inc iteration)))
+   ))
+(iterPrint)
+ 
+;;4.4 Regular expressions
+;; pound, open quote, close quote.
+#"regular expression"
+;; in the symmetrizer, re-find uses one to find whether the :name starts with "left-"
+;;then make-matching-part uses a regex to replace "left-" with "right-"
+
+;;4.5 shorter symmetrizer with reduce.
+;; sum with reduce
+(reduce + [1 2 3 4])
+;; alternatively
+(+(+ (+ 1 2) 3) 4)
+;;Reduce does:
+ ;;apply given function to the first 2 elements of a sequence, then apply the function to that result and the next element of the sequence, and so on
+;;also takes an initial value:
+(reduce + 15 [1 2 3 4])
+
+;;a way that reduce could be implemented:
+(defn my-reduce 
+  ([f initial coll]
+  (loop [result initial 
+         remaining coll]
+    (let [[current & rest] remaining]
+    (if (empty? remaining)
+      result 
+      (recur (f result current) rest)))))
+  ([f [head & tail]]
+   (my-reduce f (f head (first tail)) (rest tail)))
+  )
+(my-reduce + 15 [1 2 3 4])
+
+;; the hobbit part thing with reduce
+( def asym-hobbit-body-parts [{:name "head" :size 3}
+                             {:name "left-eye" :size 1}
+                             {:name "left-ear" :size 1}
+                             {:name "mouth" :size 1}
+                             {:name "nose" :size 1}
+                             {:name "neck" :size 2}
+                             {:name "left-shoulder" :size 3}
+                             {:name "left-upper-arm" :size 3}
+                             {:name "chest" :size 10}
+                             {:name "back" :size 10}
+                             {:name "left-forearm" :size 3}
+                             {:name "abdomen" :size 6}
+                             {:name "left-kidney" :size 1}
+                             {:name "left-hand" :size 2}
+                             {:name "left-knee" :size 2}
+                             {:name "left-thigh" :size 4}
+                             {:name "left-lower-leg" :size 3}
+                             {:name "left-achilles" :size 1}
+                             {:name "left-foot" :size 2}])
+
+
+(defn needs-matching-part?
+  [part]
+  (re-find #"^left-" (:name part)))
+
+(defn make-matching-part
+  [part]
+  {:name (clojure.string/replace (:name part) #"^left-" "right-" )
+   :size (:size part) })
+
+;;this would be what we use in place of something like our sum function in the previous
+;;usage of reduce.  There, we had a function that took in two parameters, (an unseen item and the result of all our prior operations)
+;; and it returned the sum of those (an integer), which would have been the last of the 'result of all prior operations'.  
+;; Here we will take in two parameters and return a collection (rather 
+;; than a sum).
+(defn collectSymmetrized
+  [resultCol part]
+  (if (needs-matching-part? part)
+      (conj resultCol (make-matching-part part) part)
+      (conj resultCol part)
+    )
+  )
+
+(defn symmetrize-body-parts
+  "Expects sequence of maps, each of which have one :name and one :size"
+  [asym-body-parts]
+  (reduce collectSymmetrized [] asym-hobbit-body-parts))
+(symmetrize-body-parts asym-hobbit-body-parts)
+
 
